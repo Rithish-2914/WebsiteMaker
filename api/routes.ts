@@ -8,7 +8,7 @@ import formidable from "formidable";
 import { readFileSync } from "fs";
 
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-const HF_API_URL = "https://api-inference.huggingface.co/models";
+const HF_API_URL = "https://router.huggingface.co/hf-inference/models";
 
 // Hugging Face text generation
 async function generateCode(prompt: string): Promise<string> {
