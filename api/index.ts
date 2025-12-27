@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import path from "path";
 
 const app = express();
 const httpServer = createServer(app);
@@ -74,7 +75,13 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
+    // In production, static files are served by Vercel's rewrite rules or the build output
+    // But we keep the function call for consistency if needed
+    try {
+      serveStatic(app);
+    } catch (e) {
+      log("Static serving skipped or failed in production");
+    }
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
