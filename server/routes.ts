@@ -17,7 +17,7 @@ const openai = new OpenAI({
 async function generateCode(prompt: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-5.1",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -28,7 +28,6 @@ async function generateCode(prompt: string): Promise<string> {
           content: prompt
         }
       ],
-      max_completion_tokens: 8192,
       temperature: 1,
     });
 
