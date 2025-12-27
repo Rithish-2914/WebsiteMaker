@@ -75,17 +75,28 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
-    // In production, static files are served by Vercel's rewrite rules or the build output
-    // But we keep the function call for consistency if needed
-    try {
-      serveStatic(app);
-    } catch (e) {
-      log("Static serving skipped or failed in production");
-    }
+    // Vercel handles static file serving via the `public` directory
+    // We only need to register the routes
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
+
+  // Handle SPA routing in production for the API function if needed,
+  // but usually Vercel rewrites handle this.
+  // If the user sees a download, it might be because the content-type is missing or wrong.
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    // In Vercel, static files are served from the root.
+    // This catch-all is only for routes that aren't static files.
+    res.sendFile(path.resolve(process.cwd(), "dist/public/index.html"), (err) => {
+      if (err) {
+        next();
+      }
+    });
+  });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

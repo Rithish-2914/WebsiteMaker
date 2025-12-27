@@ -16,8 +16,12 @@
       "destination": "/api/index.ts"
     },
     {
-      "source": "/(.*)",
-      "destination": "/"
+      "source": "/sites/(.*)/preview",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/((?!api|sites).* )",
+      "destination": "/index.html"
     }
   ]
 }

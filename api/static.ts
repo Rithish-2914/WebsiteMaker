@@ -7,20 +7,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "../dist/public");
+  const distPath = path.resolve(process.cwd(), "dist/public");
   if (!fs.existsSync(distPath)) {
-    // If dist doesn't exist, we're likely in a serverless environment where
-    // static files are handled by the platform (like Vercel)
     return;
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".html")) {
+        res.setHeader("Content-Type", "text/html");
+      }
+    }
+  }));
 
   // Fallback for SPA
   app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) {
+    if (req.path.startsWith("/api") || req.path.startsWith("/sites")) {
       return next();
     }
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
   });
 }
