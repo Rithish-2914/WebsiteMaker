@@ -2,9 +2,7 @@
   "version": 2,
   "buildCommand": "npm run build",
   "env": {
-    "NODE_ENV": "production",
-    "HUGGINGFACE_API_KEY": "@huggingface_api_key",
-    "DATABASE_URL": "@database_url"
+    "NODE_ENV": "production"
   },
   "functions": {
     "server/index.ts": {
