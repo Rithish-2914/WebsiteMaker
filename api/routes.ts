@@ -14,7 +14,10 @@ const HF_API_URL = "https://api-inference.huggingface.co/models";
 async function generateCode(prompt: string): Promise<string> {
   try {
     const response = await nodeFetch(`${HF_API_URL}/mistralai/Mistral-7B-Instruct-v0.1`, {
-      headers: { Authorization: `Bearer ${HF_API_TOKEN}` },
+      headers: { 
+        Authorization: `Bearer ${HF_API_TOKEN}`,
+        "Content-Type": "application/json"
+      },
       method: "POST",
       body: JSON.stringify({
         inputs: `You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store based on this request: ${prompt}\n\nReturn ONLY the HTML code. No markdown, no explanation, just raw HTML that is responsive and professional.`,
@@ -26,7 +29,9 @@ async function generateCode(prompt: string): Promise<string> {
     });
 
     if (!response.ok) {
-      throw new Error(`HF API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`HF API Error Details: ${response.status} - ${errorText}`);
+      throw new Error(`HF API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
