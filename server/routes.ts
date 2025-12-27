@@ -3,20 +3,66 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import OpenAI from "openai";
-import { createReadStream } from "fs";
 import formidable from "formidable";
+import { readFileSync } from "fs";
+
+const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const HF_API_URL = "https://api-inference.huggingface.co/models";
+
+// Hugging Face text generation
+async function generateCode(prompt: string): Promise<string> {
+  try {
+    const response = await fetch(`${HF_API_URL}/mistralai/Mistral-7B-Instruct-v0.1`, {
+      headers: { Authorization: `Bearer ${HF_API_TOKEN}` },
+      method: "POST",
+      body: JSON.stringify({
+        inputs: `You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store based on this request: ${prompt}\n\nReturn ONLY the HTML code. No markdown, no explanation, just raw HTML that is responsive and professional.`,
+        parameters: {
+          max_new_tokens: 2000,
+          temperature: 0.7,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HF API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
+    return text || "<!-- Generation failed -->";
+  } catch (error) {
+    console.error("HF generation error:", error);
+    throw error;
+  }
+}
+
+// Hugging Face speech-to-text
+async function transcribeAudioHF(audioPath: string): Promise<string> {
+  try {
+    const audioBuffer = readFileSync(audioPath);
+    const response = await fetch(`${HF_API_URL}/openai/whisper-small`, {
+      headers: { Authorization: `Bearer ${HF_API_TOKEN}` },
+      method: "POST",
+      body: audioBuffer,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HF Whisper error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text || "";
+  } catch (error) {
+    console.error("HF transcription error:", error);
+    throw error;
+  }
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Initialize OpenAI
-  // Works with both Replit AI Integrations AND standard OpenAI API keys
-  const openai = new OpenAI({
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  });
 
   app.post(api.sites.create.path, async (req, res) => {
     try {
@@ -28,21 +74,7 @@ export async function registerRoutes(
       // Start async generation (don't await)
       (async () => {
         try {
-          const completion = await openai.chat.completions.create({
-            model: "gpt-5",
-            messages: [
-              {
-                role: "system",
-                content: "You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store based on the user's request. Return ONLY the HTML code. No markdown code blocks, just raw HTML. Ensure it is responsive and looks professional."
-              },
-              {
-                role: "user",
-                content: input.prompt
-              }
-            ],
-          });
-
-          const code = completion.choices[0].message.content || "<!-- Generation failed -->";
+          const code = await generateCode(input.prompt);
           
           // Remove markdown blocks if present
           const cleanCode = code.replace(/```html/g, "").replace(/```/g, "");
@@ -85,7 +117,7 @@ export async function registerRoutes(
     res.send(site.code);
   });
 
-  // Audio transcription endpoint (Whisper)
+  // Audio transcription endpoint (Hugging Face Whisper)
   app.post("/api/transcribe", async (req, res) => {
     try {
       const form = formidable();
@@ -96,12 +128,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No audio file provided" });
       }
 
-      const transcription = await openai.audio.transcriptions.create({
-        file: createReadStream(audioFile.filepath),
-        model: "whisper-1",
-      });
-
-      res.json({ text: transcription.text });
+      const text = await transcribeAudioHF(audioFile.filepath);
+      res.json({ text });
     } catch (error) {
       console.error("Transcription error:", error);
       res.status(500).json({ error: "Failed to transcribe audio" });

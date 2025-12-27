@@ -1,132 +1,203 @@
-# Deployment Guide
+# Deployment Guide - Using Hugging Face (FREE!)
 
-## Deploying to Vercel
+## Quick Start (Replit - Current)
+
+The app is already running on Replit! To use it:
+
+1. Get your **FREE** Hugging Face API token:
+   - Go to [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+   - Click "Create new token" → "Read" access
+   - Copy the token
+
+2. Add to Replit Secrets:
+   - In Replit left sidebar → "Secrets"
+   - Add: `HUGGINGFACE_API_KEY` = your token
+   - Restart the app
+
+Done! The app uses free Hugging Face API.
+
+---
+
+## Deploying to Vercel (Recommended)
 
 ### Prerequisites
-1. OpenAI API Key
-2. PostgreSQL Database
+1. Hugging Face API Token (FREE)
+2. PostgreSQL Database (Free options available)
 3. Vercel Account
 
-### Step 1: Get OpenAI API Key
-1. Go to [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
-2. Create a new API key
-3. Copy it (you won't see it again)
-4. Make sure you have credits or billing set up on your OpenAI account
+### Step 1: Get Hugging Face API Token (FREE!)
 
-### Step 2: Set Up PostgreSQL Database
-You have several options:
+1. Go to [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+2. Sign up (free) if you don't have an account
+3. Click "Create new token"
+4. Select "Read" access level
+5. Give it a name (e.g., "website-generator")
+6. Copy the token (you won't see it again)
 
-**Option A: Vercel Postgres (Recommended)**
-1. In Vercel dashboard, go to "Storage" tab
-2. Create a new Postgres database
-3. Copy the `POSTGRES_URL` connection string
+**Cost:** $0 - Completely FREE! No billing needed.
 
-**Option B: Neon (Free tier available)**
+### Step 2: Set Up PostgreSQL Database (Free Options)
+
+You have several FREE options:
+
+**Option A: Neon (Recommended - 0.5 GB free)**
 1. Go to [https://neon.tech](https://neon.tech)
-2. Sign up and create a project
-3. Copy the connection string
+2. Sign up with GitHub
+3. Create a project
+4. Copy the `Connection string`
 
-**Option C: Railway, Supabase, or other providers**
-- Follow their setup guides and copy the connection string
+**Option B: Vercel Postgres (Limited free tier)**
+1. In Vercel dashboard → Storage tab
+2. Create Postgres database
+3. Copy connection string
+
+**Option C: Railway (Limited free tier)**
+1. Go to [https://railway.app](https://railway.app)
+2. Create project → Add PostgreSQL
+3. Copy connection string
 
 ### Step 3: Deploy to Vercel
 
 ```bash
 # 1. Push code to GitHub
 git add .
-git commit -m "Deploy to Vercel"
+git commit -m "Deploy with Hugging Face"
 git push origin main
 
-# 2. Import project in Vercel
-# - Go to https://vercel.com/new
-# - Select your GitHub repo
-# - Click "Deploy"
-
-# 3. Set Environment Variables in Vercel
-# In Vercel Dashboard → Settings → Environment Variables, add:
+# 2. Go to https://vercel.com/new
+# 3. Import your GitHub repo
+# 4. Click "Deploy"
 ```
 
-| Variable | Value | Example |
-|----------|-------|---------|
-| `OPENAI_API_KEY` | Your OpenAI API key | `sk_...` |
-| `DATABASE_URL` | Your PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
-| `NODE_ENV` | production | `production` |
+### Step 4: Set Environment Variables in Vercel
 
-### Step 4: Run Database Migrations
+After deployment, go to **Vercel Dashboard → Settings → Environment Variables**:
 
-After deployment, SSH into your Vercel environment or run:
+| Variable | Value |
+|----------|-------|
+| `HUGGINGFACE_API_KEY` | Your Hugging Face token from Step 1 |
+| `DATABASE_URL` | Your PostgreSQL connection string from Step 2 |
+| `NODE_ENV` | `production` |
 
-```bash
-npm run db:push
-```
+### Step 5: Run Database Setup
 
-Or use Vercel CLI:
+Option A - Using Vercel CLI:
 ```bash
 vercel env pull
 npm run db:push
 ```
 
-### Step 5: Test Your Deployment
+Option B - SSH into Vercel:
+```bash
+vercel ssh
+cd /var/task
+npm run db:push
+```
+
+### Step 6: Test Your Deployment
 
 Visit your Vercel URL and test:
-1. Type a website description and click "Generate Site"
-2. Click the "Voice" button and record audio
-3. Verify the generated website appears
+1. Type a description and click "Generate Site"
+2. Click "Voice" and record audio
+3. Verify website generation works
+
+---
+
+## Cost Comparison
+
+| Provider | Cost | Limit |
+|----------|------|-------|
+| **Hugging Face** | **FREE** ✅ | 30,000 inference calls/month |
+| **OpenAI** | $0.001-0.05 per use | Requires billing |
+| **Vercel** | FREE | Hobby plan |
+| **Neon** | FREE | 0.5 GB storage |
+| **Total Monthly** | **$0** | Unlimited for light use |
+
+---
 
 ## Troubleshooting
 
-### "Missing API key" Error
-- Check that `OPENAI_API_KEY` is set in Vercel Environment Variables
-- Make sure it's the correct key from OpenAI
-- Restart the deployment after adding the key
+### "Invalid API token" Error
+- Go to [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+- Check if your token is correct
+- Generate a new token if needed
+- Update in Vercel/Replit and restart
 
 ### "Database connection failed" Error
-- Check that `DATABASE_URL` is correct
-- Make sure your database is running and accessible
+- Verify `DATABASE_URL` in environment variables
+- Test connection string with:
+  ```bash
+  psql "your_connection_string"
+  ```
 - Run `npm run db:push` to create tables
 
-### "No audio transcription" Error
-- Verify `OPENAI_API_KEY` has access to Whisper API
-- Check OpenAI account has available credits
+### "Generation is slow"
+- Hugging Face free tier may be slower (5-30 seconds)
+- Paid tier would be faster, but this is FREE!
+- Be patient, it will work
 
-## Cost Estimate
+### "Audio transcription fails"
+- Ensure your audio file is under 25 MB
+- Try a different audio format (WAV, MP3, M4A)
+- Check Hugging Face API status
 
-Monthly costs for typical usage:
+---
 
-| Service | Free Tier | Cost |
-|---------|-----------|------|
-| Vercel | Included | $0 |
-| OpenAI GPT-5 | $0 | ~$0.01-0.05 per generation |
-| OpenAI Whisper | $0 | ~$0.001 per minute of audio |
-| PostgreSQL | Included (Vercel) | $0 |
+## API Rate Limits (Hugging Face Free)
 
-**Example:** 100 website generations + 10 voice transcriptions = ~$1-2
+- **Text Generation:** 30,000 calls/month = ~1,000 sites/month
+- **Audio Transcription:** Unlimited in free tier
+- **Total:** More than enough for personal/hobby use
+
+---
 
 ## Environment Variables Reference
 
-### Required for Production
-- `OPENAI_API_KEY` - Your OpenAI API key
-- `DATABASE_URL` - PostgreSQL connection string
-- `NODE_ENV` - Set to `production`
-
-### Optional
-- `AI_INTEGRATIONS_OPENAI_API_KEY` - For Replit deployments only
-- `AI_INTEGRATIONS_OPENAI_BASE_URL` - For Replit deployments only
-
-## Updating Your App
-
-After deployment, to update your code:
-
-```bash
-git add .
-git commit -m "Update feature"
-git push origin main
+### Production (Vercel)
+```
+HUGGINGFACE_API_KEY=hf_xxxxxxxxxxxx
+DATABASE_URL=postgresql://...
+NODE_ENV=production
 ```
 
-Vercel will automatically redeploy your changes.
+### Development (Replit)
+```
+HUGGINGFACE_API_KEY=hf_xxxxxxxxxxxx
+DATABASE_URL=postgresql://... (auto-set by Replit)
+NODE_ENV=development
+```
+
+---
+
+## Model Details
+
+### Text Generation
+- **Model:** Mistral-7B-Instruct
+- **Speed:** 5-30 seconds (free tier)
+- **Quality:** Good for website HTML
+- **Cost:** FREE
+
+### Speech-to-Text
+- **Model:** Whisper (OpenAI's open model via HF)
+- **Speed:** 2-10 seconds (free tier)
+- **Languages:** 99+ languages
+- **Cost:** FREE
+
+---
+
+## Next Steps
+
+1. ✅ Deploy to Vercel (follow Step 3)
+2. ✅ Add Hugging Face token
+3. ✅ Add database URL
+4. ✅ Run database setup
+5. ✅ Test the app
+6. 🎉 Share with friends (completely free!)
+
+---
 
 ## Support
 
-- OpenAI Issues: [help.openai.com](https://help.openai.com)
+- Hugging Face Issues: [discord.gg/JfAtqhgAVk](https://discord.gg/JfAtqhgAVk)
 - Vercel Issues: [vercel.com/support](https://vercel.com/support)
-- Database Issues: Check your database provider's documentation
+- Database Issues: Check your database provider's docs
