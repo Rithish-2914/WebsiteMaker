@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { insertSiteSchema, sites } from "./schema";
+import { insertSiteSchema, sites } from "./schema.js";
 
 export const api = {
   sites: {

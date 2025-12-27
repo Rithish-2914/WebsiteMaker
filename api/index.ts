@@ -82,8 +82,12 @@ app.use((req, res, next) => {
     // In production on Vercel, static files are served by the platform.
     // We only need to handle API routes.
   } else {
-    const { setupVite } = await import("./vite.js");
-    await setupVite(httpServer, app);
+    try {
+      const { setupVite } = await import("./vite.js");
+      await setupVite(httpServer, app);
+    } catch (e) {
+      log("Vite setup skipped or failed");
+    }
   }
 
   // Handle SPA routing in development. In Vercel production, this is handled by rewrites in vercel.json
