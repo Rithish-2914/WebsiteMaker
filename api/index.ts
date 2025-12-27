@@ -1,15 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
+import { fileURLToPath } from "url";;
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 declare module "http" {
   interface IncomingMessage {
@@ -72,33 +70,22 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
+    throw err;
   });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
-    // In production on Vercel, static files are served by the platform.
-    // We only need to handle API routes.
+    serveStatic(app);
   } else {
     try {
       // Use relative path for development
       const { setupVite } = await import("../server/vite.js");
-      await httpServer.listen(5000, "0.0.0.0");
       await setupVite(httpServer, app);
     } catch (e) {
       log("Vite setup skipped or failed: " + (e instanceof Error ? e.message : String(e)));
     }
-  }
-
-  // Handle SPA routing in development. In Vercel production, this is handled by rewrites in vercel.json
-  if (process.env.NODE_ENV !== "production") {
-    app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/sites")) {
-        return next();
-      }
-      next();
-    });
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

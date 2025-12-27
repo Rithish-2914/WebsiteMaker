@@ -1,3 +1,4 @@
+import nodeFetch from "node-fetch";
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage.js";
@@ -5,24 +6,15 @@ import { api } from "../shared/routes.js";
 import { z } from "zod";
 import formidable from "formidable";
 import { readFileSync } from "fs";
-import fetch from "node-fetch";
 
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 const HF_API_URL = "https://api-inference.huggingface.co/models";
 
 // Hugging Face text generation
 async function generateCode(prompt: string): Promise<string> {
-  if (!HF_API_TOKEN) {
-    console.error("Missing AI API token (HUGGINGFACE_API_KEY or AI_INTEGRATIONS_OPENAI_API_KEY)");
-    throw new Error("Missing AI API token");
-  }
-
   try {
-    const response = await fetch(`${HF_API_URL}/mistralai/Mistral-7B-Instruct-v0.1`, {
-      headers: { 
-        Authorization: `Bearer ${HF_API_TOKEN}`,
-        "Content-Type": "application/json"
-      },
+    const response = await nodeFetch(`${HF_API_URL}/mistralai/Mistral-7B-Instruct-v0.1`, {
+      headers: { Authorization: `Bearer ${HF_API_TOKEN}` },
       method: "POST",
       body: JSON.stringify({
         inputs: `You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store based on this request: ${prompt}\n\nReturn ONLY the HTML code. No markdown, no explanation, just raw HTML that is responsive and professional.`,
@@ -34,8 +26,6 @@ async function generateCode(prompt: string): Promise<string> {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`HF API error (${response.status}):`, errorText);
       throw new Error(`HF API error: ${response.status}`);
     }
 
@@ -52,7 +42,7 @@ async function generateCode(prompt: string): Promise<string> {
 async function transcribeAudioHF(audioPath: string): Promise<string> {
   try {
     const audioBuffer = readFileSync(audioPath);
-    const response = await fetch(`${HF_API_URL}/openai/whisper-small`, {
+    const response = await nodeFetch(`${HF_API_URL}/openai/whisper-small`, {
       headers: { Authorization: `Bearer ${HF_API_TOKEN}` },
       method: "POST",
       body: audioBuffer,
@@ -103,9 +93,10 @@ export async function registerRoutes(
       res.json(site);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
       }
-      res.status(500).json({ message: "Internal server error" });
     }
   });
 
