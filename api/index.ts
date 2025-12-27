@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
-import { fileURLToPath } from "url";;
+import { fileURLToPath } from "url";
+import path from "path";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
 
