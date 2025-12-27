@@ -69,23 +69,18 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
+    console.error("Express Error:", { status, message, stack: err.stack });
     res.status(status).json({ message });
-    throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
     try {
-      // Use relative path for development
       const { setupVite } = await import("../server/vite.js");
       await setupVite(httpServer, app);
     } catch (e) {
-      log("Vite setup skipped or failed: " + (e instanceof Error ? e.message : String(e)));
+      log("Vite setup skipped: " + (e instanceof Error ? e.message : String(e)));
     }
   }
 
