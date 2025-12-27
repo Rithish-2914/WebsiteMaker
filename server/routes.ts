@@ -6,41 +6,41 @@ import { z } from "zod";
 import formidable from "formidable";
 import { readFileSync } from "fs";
 
-const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-const HF_API_URL = "https://router.huggingface.co/hf-inference/models";
+import OpenAI from "openai";
 
-// Hugging Face text generation
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || "dummy",
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+// OpenAI text generation
 async function generateCode(prompt: string): Promise<string> {
   try {
-    const response = await fetch(`${HF_API_URL}/mistralai/Mistral-7B-Instruct-v0.3`, {
-      headers: { 
-        Authorization: `Bearer ${HF_API_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      method: "POST",
-      body: JSON.stringify({
-        inputs: `<s>[INST] You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store based on this request: ${prompt}\n\nReturn ONLY the HTML code. No markdown, no explanation, just raw HTML that is responsive and professional. [/INST]`,
-        parameters: {
-          max_new_tokens: 2000,
-          temperature: 0.7,
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.1",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store. Return ONLY the HTML code. No markdown, no explanation, just raw HTML that is responsive and professional."
         },
-      }),
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_completion_tokens: 8192,
+      temperature: 1,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`HF API Error Details: ${response.status} - ${errorText}`);
-      throw new Error(`HF API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const text = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
-    return text || "<!-- Generation failed -->";
+    return response.choices[0]?.message?.content || "<!-- Generation failed -->";
   } catch (error) {
-    console.error("HF generation error:", error);
+    console.error("OpenAI generation error:", error);
     throw error;
   }
 }
+
+const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const HF_API_URL = "https://router.huggingface.co/hf-inference/models";
 
 // Hugging Face speech-to-text
 async function transcribeAudioHF(audioPath: string): Promise<string> {
