@@ -20,8 +20,8 @@
       "destination": "/api/index.ts"
     },
     {
-      "source": "/((?!api|sites).* )",
-      "destination": "/index.html"
+      "source": "/(.*)",
+      "destination": "/api/index.ts"
     }
   ]
 }
