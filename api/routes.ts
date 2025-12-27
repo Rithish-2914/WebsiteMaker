@@ -12,9 +12,17 @@ const HF_API_URL = "https://api-inference.huggingface.co/models";
 
 // Hugging Face text generation
 async function generateCode(prompt: string): Promise<string> {
+  if (!HF_API_TOKEN) {
+    console.error("Missing AI API token (HUGGINGFACE_API_KEY or AI_INTEGRATIONS_OPENAI_API_KEY)");
+    throw new Error("Missing AI API token");
+  }
+
   try {
     const response = await fetch(`${HF_API_URL}/mistralai/Mistral-7B-Instruct-v0.1`, {
-      headers: { Authorization: `Bearer ${HF_API_TOKEN}` },
+      headers: { 
+        Authorization: `Bearer ${HF_API_TOKEN}`,
+        "Content-Type": "application/json"
+      },
       method: "POST",
       body: JSON.stringify({
         inputs: `You are an expert web developer. Generate a single-file HTML (with embedded CSS/JS) for a clothing store based on this request: ${prompt}\n\nReturn ONLY the HTML code. No markdown, no explanation, just raw HTML that is responsive and professional.`,
@@ -26,6 +34,8 @@ async function generateCode(prompt: string): Promise<string> {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`HF API error (${response.status}):`, errorText);
       throw new Error(`HF API error: ${response.status}`);
     }
 
@@ -67,10 +77,12 @@ export async function registerRoutes(
 
   app.post(api.sites.create.path, async (req, res) => {
     try {
+      console.log("Creating site request:", req.body);
       const input = api.sites.create.input.parse(req.body);
       
       // Create initial site record
       const site = await storage.createSite(input);
+      console.log("Site record created:", site.id);
       
       // Start async generation (don't await)
       (async () => {
@@ -84,18 +96,20 @@ export async function registerRoutes(
             code: cleanCode,
             status: "completed"
           });
+          console.log("Site generation completed:", site.id);
         } catch (error) {
-          console.error("Generation error:", error);
+          console.error("Generation error for site", site.id, ":", error);
           await storage.updateSite(site.id, { status: "failed" });
         }
       })();
 
       res.json(site);
     } catch (err) {
+      console.error("API error /api/sites:", err);
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
       } else {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: err instanceof Error ? err.message : "Internal server error" });
       }
     }
   });
