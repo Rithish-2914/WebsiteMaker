@@ -1,14 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCreateSite } from "@/hooks/use-sites";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SiteCard } from "@/components/site-card";
-import { Wand2, Sparkles, MessageSquare, Zap } from "lucide-react";
+import { Wand2, Sparkles, MessageSquare, Zap, Mic, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  
   // Storing IDs locally since backend doesn't have list endpoint yet
   const [siteIds, setSiteIds] = useState<number[]>(() => {
     const saved = localStorage.getItem("siteIds");
@@ -21,6 +26,71 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("siteIds", JSON.stringify(siteIds));
   }, [siteIds]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        await transcribeAudio(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      toast({
+        title: "Microphone access denied",
+        description: "Please allow microphone access to use voice input.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Transcription failed");
+
+      const data = await response.json();
+      setPrompt(data.text);
+      toast({
+        title: "Voice transcribed",
+        description: `"${data.text.substring(0, 50)}..."`,
+      });
+    } catch (error) {
+      toast({
+        title: "Transcription failed",
+        description: "Could not transcribe audio. Please try again or type instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,11 +144,11 @@ export default function Home() {
             className="space-y-4"
           >
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-extrabold tracking-tight text-foreground">
-              Turn a <span className="text-primary bg-primary/5 px-2 rounded-lg inline-block">text message</span><br />
+              Turn a <span className="text-primary bg-primary/5 px-2 rounded-lg inline-block">message or voice</span><br />
               into a <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">website</span>.
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Describe your dream online store in plain English. AI writes the code, designs the layout, and deploys it in seconds.
+              Type or record your description. AI writes the code, designs the layout, and deploys it in seconds.
             </p>
           </motion.div>
 
@@ -99,13 +169,42 @@ export default function Home() {
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="E.g. 'A minimal streetwear brand with dark aesthetic'"
                     className="border-0 shadow-none focus-visible:ring-0 px-0 h-12 text-base bg-transparent"
-                    disabled={isPending}
+                    disabled={isPending || isRecording || isTranscribing}
                   />
                 </div>
+                
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="ghost"
+                  className="rounded-xl h-12 px-4 font-semibold shadow-none"
+                  disabled={isPending || isTranscribing}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  data-testid="button-audio-toggle"
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-4 h-4 mr-2 fill-red-500 text-red-500" />
+                      Stop
+                    </>
+                  ) : isTranscribing ? (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                      Transcribing...
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4 mr-2" />
+                      Voice
+                    </>
+                  )}
+                </Button>
+
                 <Button 
                   size="lg" 
-                  disabled={isPending || !prompt.trim()}
+                  disabled={isPending || !prompt.trim() || isRecording || isTranscribing}
                   className="rounded-xl h-12 sm:w-auto w-full font-semibold shadow-none"
+                  data-testid="button-generate"
                 >
                   {isPending ? (
                     <>

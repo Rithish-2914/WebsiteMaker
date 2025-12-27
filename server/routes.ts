@@ -4,13 +4,18 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
+import { createReadStream } from "fs";
+import formidable from "formidable";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Initialize OpenAI (assuming standard env vars from integration)
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY });
+  // Initialize OpenAI with correct integration env vars
+  const openai = new OpenAI({
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  });
 
   app.post(api.sites.create.path, async (req, res) => {
     try {
@@ -23,7 +28,7 @@ export async function registerRoutes(
       (async () => {
         try {
           const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-5",
             messages: [
               {
                 role: "system",
@@ -77,6 +82,29 @@ export async function registerRoutes(
     }
     res.setHeader("Content-Type", "text/html");
     res.send(site.code);
+  });
+
+  // Audio transcription endpoint (Whisper)
+  app.post("/api/transcribe", async (req, res) => {
+    try {
+      const form = formidable();
+      const [fields, files] = await form.parse(req);
+      
+      const audioFile = Array.isArray(files.audio) ? files.audio[0] : files.audio?.[0];
+      if (!audioFile) {
+        return res.status(400).json({ error: "No audio file provided" });
+      }
+
+      const transcription = await openai.audio.transcriptions.create({
+        file: createReadStream(audioFile.filepath),
+        model: "whisper-1",
+      });
+
+      res.json({ text: transcription.text });
+    } catch (error) {
+      console.error("Transcription error:", error);
+      res.status(500).json({ error: "Failed to transcribe audio" });
+    }
   });
 
   return httpServer;
