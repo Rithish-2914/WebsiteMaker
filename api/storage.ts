@@ -1,5 +1,5 @@
-import { db } from "./db";
-import { sites, type InsertSite, type Site } from "../shared/schema";
+import { db } from "./db.js";
+import { sites, type InsertSite, type Site } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
