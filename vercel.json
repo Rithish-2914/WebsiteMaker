@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "env": {
+    "NODE_ENV": "production",
+    "HUGGINGFACE_API_KEY": "@huggingface_api_key",
+    "DATABASE_URL": "@database_url"
+  },
+  "functions": {
+    "server/index.ts": {
+      "runtime": "nodejs20.x",
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}
