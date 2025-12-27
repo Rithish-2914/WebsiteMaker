@@ -83,10 +83,12 @@ app.use((req, res, next) => {
     // We only need to handle API routes.
   } else {
     try {
-      const { setupVite } = await import("./vite.js");
+      // Use relative path for development
+      const { setupVite } = await import("../server/vite.js");
+      await httpServer.listen(5000, "0.0.0.0");
       await setupVite(httpServer, app);
     } catch (e) {
-      log("Vite setup skipped or failed");
+      log("Vite setup skipped or failed: " + (e instanceof Error ? e.message : String(e)));
     }
   }
 
