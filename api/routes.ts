@@ -5,6 +5,7 @@ import { api } from "../shared/routes.js";
 import { z } from "zod";
 import formidable from "formidable";
 import { readFileSync } from "fs";
+import fetch from "node-fetch";
 
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 const HF_API_URL = "https://api-inference.huggingface.co/models";

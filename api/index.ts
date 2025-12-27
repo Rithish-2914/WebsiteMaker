@@ -3,6 +3,10 @@ import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -90,6 +94,7 @@ app.use((req, res, next) => {
     
     if (process.env.NODE_ENV === "production") {
       const indexPath = path.resolve(process.cwd(), "dist/public/index.html");
+      res.setHeader("Content-Type", "text/html");
       res.sendFile(indexPath, (err) => {
         if (err) {
           next();
