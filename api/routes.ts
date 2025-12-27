@@ -77,16 +77,17 @@ export async function registerRoutes(
 
   app.post(api.sites.create.path, async (req, res) => {
     try {
-      console.log("Creating site request:", req.body);
+      console.log("Creating site request:", JSON.stringify(req.body));
       const input = api.sites.create.input.parse(req.body);
       
       // Create initial site record
       const site = await storage.createSite(input);
-      console.log("Site record created:", site.id);
+      console.log("Site record created with ID:", site.id);
       
       // Start async generation (don't await)
       (async () => {
         try {
+          console.log("Starting generation for site:", site.id, "with prompt:", input.prompt);
           const code = await generateCode(input.prompt);
           
           // Remove markdown blocks if present
@@ -96,21 +97,23 @@ export async function registerRoutes(
             code: cleanCode,
             status: "completed"
           });
-          console.log("Site generation completed:", site.id);
+          console.log("Site generation successfully completed for ID:", site.id);
         } catch (error) {
-          console.error("Generation error for site", site.id, ":", error);
+          console.error("Critical generation error for site", site.id, ":", error instanceof Error ? error.message : String(error));
           await storage.updateSite(site.id, { status: "failed" });
         }
       })();
 
       res.json(site);
     } catch (err) {
-      console.error("API error /api/sites:", err);
+      console.error("API route error on /api/sites:", err instanceof Error ? err.message : String(err));
       if (err instanceof z.ZodError) {
-        res.status(400).json({ message: err.errors[0].message });
-      } else {
-        res.status(500).json({ message: err instanceof Error ? err.message : "Internal server error" });
+        return res.status(400).json({ message: err.errors[0].message });
       }
+      res.status(500).json({ 
+        message: "Internal server error during site creation",
+        error: err instanceof Error ? err.message : "Unknown error"
+      });
     }
   });
 
